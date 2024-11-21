@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Healthcare Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/font/bootstrap-icons.min.css">
+    <style>
+        body {
+            background: linear-gradient(to right, #eef7f9, #dceef3);
+            font-family: 'Roboto', sans-serif;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        nav {
+    background-color: #00a6c9;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+}
+
+.nav-link {
+    color: white;
+    margin: 0 10px;
+    font-weight: 500;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+   
+}
+
+        .dropdown-toggle {
+            color: white;
+        }
+
+        .dashboard-container {
+            margin: 50px auto;
+            max-width: 1200px;
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .dashboard-card {
+            background: linear-gradient(to bottom, #ffffff, #f7f9fa);
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .dashboard-card h3 {
+            font-size: 1.8rem;
+            color: #00a6c9;
+            margin-bottom: 15px;
+        }
+
+        .dashboard-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+
+        .dashboard-card .card-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .dashboard-card .btn {
+            background-color: #4db8cb;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        .dashboard-card .btn:hover {
+            background-color: #0099b2;
+            transform: translateY(-3px);
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            background-color: #00a6c9;
+            color: white;
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <a class="navbar-brand" href="dashboard.html">Care Connect</a>
+        <div>
+            <ul class="navbar-nav d-flex flex-row">
+                <li class="nav-item"><a class="nav-link active" href="patient-records.html" id="patientRecordsLink">Patient Records</a></li>
+                <li class="nav-item"><a class="nav-link" href="appointments.html" id="appointmentsLink">Appointments</a></li>
+                <li class="nav-item"><a class="nav-link" href="communication.html" id="communicationsLink">Communication</a></li>
+            </ul>
+        </div>
+        <div class="dropdown">
+            <a class="dropdown-toggle text-white text-decoration-none" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-person-circle me-1"></i> <span id="userName">User</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#" id="profileLink">Profile</a></li>
+                <li><a class="dropdown-item" href="#" id="logoutLink">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Dashboard Section -->
+    <div class="container text-center mt-4">
+        <h1 style="color: #00a6c9; font-size: 2.5rem; margin-bottom: 20px;">Care Connect Dashboard</h1>
+        <p style="font-size: 1.2rem; color: #555;">Your central hub for managing healthcare operations</p>
+    </div>
+    <div class="dashboard-container">
+        <!-- Patient Records Card -->
+        <div class="dashboard-card">
+            <h3>Patient Records</h3>
+            <img src="assets/images/patient-summary.png" alt="Patient Records">
+            <p>Manage and view all patient-related data securely.</p>
+            <div class="card-buttons">
+                <button class="btn" onclick="fetchPatientRecords()">View Records</button>
+            </div>
+        </div>
+
+        <!-- Appointments Card -->
+        <div class="dashboard-card">
+            <h3>Appointments</h3>
+            <img src="assets/images/appointment.jpeg" alt="Appointments">
+            <p>Schedule and manage patient appointments effortlessly.</p>
+            <div class="card-buttons">
+                <button class="btn" onclick="fetchAppointments()">Manage Appointments</button>
+            </div>
+        </div>
+
+        <!-- Communication Card -->
+        <div class="dashboard-card">
+            <h3>Communication</h3>
+            <img src="assets/images/communication.png" alt="Communication">
+            <p>Stay connected with patients and staff seamlessly.</p>
+            <div class="card-buttons">
+                <button class="btn" onclick="navigateTo('communication.html')">See Communication</button>
+            </div>
+        </div>
+    </div>
+    <!-- Profile Modal -->
+    <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="profileModalLabel">Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>First Name:</strong> <span id="profileFirstName">John</span></p>
+                    <p><strong>Last Name:</strong> <span id="profileLastName">Doe</span></p>
+                    <p><strong>Government ID:</strong> <span id="profileGovtId">123456789</span></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2024 Healthcare Dashboard. All Rights Reserved.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Profile Modal instance
+            const profileModalElement = document.getElementById('profileModal');
+            const profileModal = new bootstrap.Modal(profileModalElement);
+
+            document.getElementById('profileLink').addEventListener('click', function() {
+                // Load user information from local storage
+                const firstName = localStorage.getItem("firstName") || "John";
+                const lastName = localStorage.getItem("lastName") || "Doe";
+                const govtId = localStorage.getItem("govtId") || "123456789";
+
+                // Populate modal with user information
+                document.getElementById('profileFirstName').textContent = firstName;
+                document.getElementById('profileLastName').textContent = lastName;
+                document.getElementById('profileGovtId').textContent = govtId;
+
+                // Show modal
+                profileModal.show();
+            });
+
+            // Ensure the modal backdrop is removed when the modal is closed
+            profileModalElement.addEventListener('hidden.bs.modal', function () {
+                document.body.classList.remove('modal-open'); // Ensures body scroll is restored
+                document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+            });
+
+            // Logout functionality
+            document.getElementById('logoutLink').addEventListener('click', function() {
+                localStorage.clear(); // Clear user data
+                sessionStorage.clear(); // Clear session storage
+                window.location.replace('/login.html'); // Redirect to login page
+            });
+
+            // Prevent back navigation after logout
+            window.onpageshow = function(event) {
+                if (event.persisted) {
+                    window.location.replace('/login.html');
+                }
+            };
+        });
+
+    </script>
+        <script>
+       
+        //const patientId = "12345"; // Mock Patient ID
+        // Retrieve patientId from localStorage
+        const patientId = localStorage.getItem("userID");
+        console.log("patientId is : ");
+        console.log(patientId);
+        function fetchPatientRecords() {
+            fetch(`/api/patient-records?patientId=${patientId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Patient Records:", data);
+                    window.location.href = "patient-records.html"; // Redirect to patient records page
+                })
+                .catch(error => console.error('Error fetching patient records:', error));
+        }
+
+        function fetchAppointments() {
+            fetch(`/api/appointments?patientId=${patientId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Appointment History:", data);
+                    window.location.href = "appointments.html"; // Redirect to appointments page
+                })
+                .catch(error => console.error('Error fetching appointments:', error));
+        }
+
+       
+        document.addEventListener("DOMContentLoaded", function () {
+            // Retrieve and display user's name
+            const firstName = localStorage.getItem("firstName") || "John"; // Replace "John" with a default or fallback name
+            document.getElementById("userName").textContent = firstName;
+
+            // Active link highlighting based on the current page
+            const currentPath = window.location.pathname;
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            if (currentPath.includes("patient-records.html")) {
+                document.getElementById("patientRecordsLink").classList.add("active");
+            } else if (currentPath.includes("appointments.html")) {
+                document.getElementById("appointmentsLink").classList.add("active");
+            } else if (currentPath.includes("communication.html")) {
+                document.getElementById("communicationsLink").classList.add("active");
+            }
+
+            // Profile and logout functionality
+            document.getElementById('profileLink').addEventListener('click', function() {
+                const profileModal = new bootstrap.Modal(document.getElementById('profileModal'));
+                profileModal.show();
+            });
+
+            document.getElementById('logoutLink').addEventListener('click', function() {
+                localStorage.clear(); // Clear user data
+                sessionStorage.clear(); // Clear session storage
+                window.location.replace('/login.html'); // Redirect to login page
+            });
+        });
+
+        function navigateTo(page) {
+        window.location.href = page; // Redirect to the specified page
+    }
+
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Care Connect</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <style>
+        /* Background Color and Layout */
+        body {
+            background: linear-gradient(to right, #0dcaf0, #8e9eab); /* Soft gradient using #0dcaf0 */
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            color: #fff; /* Light text on darker background */
+        }
+
+        /* Container styling for the home page */
+        #homePage {
+            text-align: center;
+            padding: 50px;
+            background: rgba(255, 255, 255, 0.9);  /* Light background with transparency */
+            border-radius: 15px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
+            transition: opacity 1s ease-out;
+            max-width: 450px;
+            margin: 0 20px;
+        }
+
+        /* Main Heading - Project Name */
+        #projectName {
+            font-size: 70px;
+            font-weight: 700;
+            color: #0dcaf0; /* Teal color */
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            animation: fadeIn 1s ease-out;
+            margin-bottom: 20px;
+        }
+
+        /* Animation for fading in */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Fade out effect before redirection */
+        .fadeOut {
+            opacity: 0;
+            transition: opacity 1s ease-out;
+        }
+
+        /* Small text styling */
+        #smallText {
+            font-size: 18px;
+            color: #2c3e50;
+            margin-top: 15px;
+            font-weight: 300;
+        }
+
+        /* Button Style for redirects */
+        .btn-redirect {
+            margin-top: 20px;
+            background-color: #0dcaf0; /* Matching with the primary color */
+            color: #fff;
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-redirect:hover {
+            background-color: #04a5a5; /* Slightly darker shade for hover */
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Home Page Container -->
+    <div class="container" id="homePage">
+        <h1 id="projectName">Care Connect</h1>
+        <!-- <p id="smallText">Connecting you to your healthcare needs. Please wait...</p>
+        <a href="/login" class="btn-redirect">Go to Login</a> -->
+    </div>
+
+    <script>
+        setTimeout(() => {
+            // Adding fade-out class before redirecting
+            document.getElementById('homePage').classList.add('fadeOut');
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 1000); // Wait for fade-out to complete before redirecting
+        }, 2000); // Show Care Connect for 2 seconds
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,142 @@
+const express = require('express');
+const path = require('path');
+const cors = require('cors');
+const { Pool } = require('pg');
+const session = require('express-session');
+const bcrypt = require('bcrypt');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+// Use express-session for session management
+app.use(session({
+    secret: 'secret-key', // Replace with your secret key
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false } // set to true if using https
+}));
+
+// Set up the PostgreSQL connection pool
+const pool = new Pool({
+    user: 'manasa',
+    host: 'dpg-csg8sae8ii6s739dpqsg-a.oregon-postgres.render.com',
+    database: 'care_connect_75ii',
+    password: 'fXpuygKyI3AwexBiv5PHwkcJkCCQupIW',
+    port: 5432,
+    ssl: { rejectUnauthorized: false }
+});
+
+// Serve the home page (Care Connect title) for 2 seconds
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'home.html'));
+});
+
+// Route for login page
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Serve the sign-up page
+app.get('/signup', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'signup.html'));
+});
+
+// Sign up logic
+app.post('/signup', async (req, res) => {
+    const { firstName, lastName, governmentHealthId, password, confirmPassword } = req.body;
+
+    // Check if password meets the required conditions
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])[A-Za-z0-9!@#$%^&*]{8,}$/;
+    if (!passwordRegex.test(password)) {
+        return res.status(400).send('Password must be at least 8 characters long, contain 1 capital letter, 1 symbol, and 1 number.');
+    }
+
+    // Check if passwords match
+    if (password !== confirmPassword) {
+        return res.status(400).send('Passwords do not match.');
+    }
+
+    // Check if the Government Health ID already exists
+    try {
+        const result = await pool.query('SELECT * FROM patients WHERE patient_id = $1', [governmentHealthId]);
+        if (result.rows.length > 0) {
+            return res.status(400).send('User already exists. Please log in.');
+        }
+
+        // Hash the password before saving
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Insert the new user into the database
+        await pool.query(
+            'INSERT INTO patients (patient_id, first_name, last_name, password) VALUES ($1, $2, $3, $4)',
+            [governmentHealthId, firstName, lastName, hashedPassword]
+        );
+
+        // Redirect to the login page after successful sign-up
+        res.redirect('/login');
+    } catch (error) {
+        console.error('Error during sign-up:', error);
+        res.status(500).send('Server error');
+    }
+});
+
+// Login logic
+app.post('/login', async (req, res) => {
+    const { governmentHealthId, password } = req.body;
+
+    try {
+        const result = await pool.query('SELECT * FROM patients WHERE patient_id = $1', [governmentHealthId]);
+        if (result.rows.length === 0) {
+            return res.status(400).send('Invalid Government Health ID or Password.');
+        }
+
+        const user = result.rows[0];
+        const match = await bcrypt.compare(password, user.password);
+
+        if (match) {
+            // Create session on successful login
+            req.session.userId = user.patient_id;
+            return res.redirect('/dashboard');
+        } else {
+            return res.status(400).send('Invalid Government Health ID or Password.');
+        }
+    } catch (error) {
+        console.error('Error during login:', error);
+        res.status(500).send('Server error');
+    }
+});
+
+// Dashboard route (after login)
+app.get('/dashboard', (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/login');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+// Serve the appointment page for logged-in users
+app.get('/appointments', (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/login');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'appointments.html'));
+});
+
+// Handle logout
+app.get('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            return res.status(500).send('Failed to log out.');
+        }
+        res.redirect('/login');
+    });
+});
+
+// Start the server
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});

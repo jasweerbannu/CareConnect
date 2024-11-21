@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Records - Care Connect</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <style>
+        body {
+            background: linear-gradient(to right, #eef7f9, #dceef3);
+            font-family: 'Roboto', sans-serif;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header h1 {
+            color: #00a6c9;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+        .card {
+            width: 100%;
+            max-width: 1375px;
+            height: 575px;
+            margin: auto;
+            overflow: hidden;
+        }
+        .card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .btn-primary {
+            --bs-btn-bg: #0dcaf0 !important;
+        }
+        nav {
+    background-color: #00a6c9;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+}
+
+.nav-link {
+    color: white;
+    margin: 0 10px;
+    font-weight: 500;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}   
+
+
+
+.dropdown-toggle {
+    color: white;
+}
+
+.navbar-toggler-icon {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 30 30"><path d="M4 7h22v2H4zM4 15h22v2H4zM4 23h22v2H4z"/></svg>');
+}
+
+@media (max-width: 768px) {
+    .dropdown-menu {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+    </style>
+</head>
+<body>
+    <nav>
+        <a class="navbar-brand" href="dashboard.html">Care Connect</a>
+        <div>
+            <ul class="navbar-nav d-flex flex-row">
+                <li class="nav-item"><a class="nav-link active" href="patient-records.html" id="patientRecordsLink">Patient Records</a></li>
+                <li class="nav-item"><a class="nav-link" href="appointments.html" id="appointmentsLink">Appointments</a></li>
+                <li class="nav-item"><a class="nav-link" href="communication.html" id="communicationsLink">Communication</a></li>
+            </ul>
+        </div>
+        <div class="dropdown">
+            <a class="dropdown-toggle text-white text-decoration-none" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-person-circle me-1"></i> <span id="userName">User</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#" id="profileLink">Profile</a></li>
+                <li><a class="dropdown-item" href="#" id="logoutLink">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+    <div class="modal fade" id="alertModal" tabindex="-1" aria-labelledby="alertModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="alertModalLabel">Alert</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="alertModalBody">
+                    <!-- Message will be set dynamically -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container mt-5">
+        <header class="text-center mb-4">
+            <h1>Patient Records</h1>
+            <p>Securely manage all patient information in one place.</p>
+        </header>
+
+        <div class="card shadow-sm mb-4">
+            <img src="assets/images/patient-record-img.png" class="card-img-top" alt="Patient Records Image">
+        </div>
+
+        <div class="card-body">
+            <div class="mb-3 d-flex">
+                <select class="form-select me-2" id="searchColumn">
+                    <option value="" disabled selected>Select a column</option>
+                    <option value="record_id">Record Id</option>
+                    <option value="record_name">Record Name</option>
+                    <option value="uploaded_date">Uploaded Date</option>
+                    <option value="test_date">Test Date</option>
+                </select>
+                <input type="text" class="form-control me-2" id="searchInput" placeholder="Enter search term...">
+                <button class="btn btn-primary" style="background-color: #4db8cb;" id="searchButton">Search</button>
+            </div>
+        </div>
+
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Record ID</th>
+                    <th>Record Name</th>
+                    <th>Record Uploaded Date</th>
+                    <th>Test Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="recordsTableBody"></tbody>
+        </table>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const patientId = localStorage.getItem("userID");
+
+            async function fetchPatientRecords() {
+                try {
+                    const response = await fetch(`/api/patient-records?patientId=${patientId}`);
+                    const records = await response.json();
+                    const tableBody = document.getElementById('recordsTableBody');
+                    tableBody.innerHTML = '';
+
+                    records.forEach(record => {
+                        const row = document.createElement('tr');
+                        //console.log(record.record_document);
+                        // Format dates to 'YYYY-MM-DD'
+                        const uploadedDate = new Date(record.uploaded_date).toISOString().slice(0, 10); // "YYYY-MM-DD"
+                        const testDate = new Date(record.test_date).toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+                        row.innerHTML = `
+                            <td>${record.record_id}</td>
+                            <td>${record.record_name}</td>
+                            <td>${uploadedDate}</td>
+                            <td>${testDate}</td>
+                            <td>
+                                <button class="btn btn-outline-primary btn-sm" onclick="viewDocument(this)" data-document="${record.record_document}">View</button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="downloadDocument(this)" data-document="${record.record_document}">Download</button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+
+                } catch (error) {
+                    console.error('Error fetching patient records:', error);
+                }
+            }
+
+            fetchPatientRecords();
+
+            
+        });
+
+        document.getElementById('searchButton').addEventListener('click', async function() {
+            const column = document.getElementById('searchColumn').value;
+            const searchTerm = document.getElementById('searchInput').value;
+
+            if (!searchTerm) {
+                showModal('Please enter a search term.');
+                return;
+            }
+
+            if (column && searchTerm) {
+                try {
+                    const response = await fetch(`/patients/search?column=${column}&searchTerm=${searchTerm}`);
+                    
+                    if (response.status === 404) {
+                        showModal('The item you are searching for is not found.');
+                        return;
+                    }
+
+                    const records = await response.json();
+                    const tableBody = document.getElementById('recordsTableBody');
+                    tableBody.innerHTML = '';
+                    const storedGovtId = localStorage.getItem("govtId");
+                    console.log(storedGovtId);
+                    
+                    records.forEach(record => {
+                        console.log(record.patient_id);
+                        console.log("inside the records");
+                        if (record.patient_id === storedGovtId) {
+                            const row = document.createElement('tr');
+                            
+                            // Format dates to 'YYYY-MM-DD'
+                            const uploadedDate = new Date(record.uploaded_date).toISOString().slice(0, 10); // "YYYY-MM-DD"
+                            const testDate = new Date(record.test_date).toISOString().slice(0, 10); // "YYYY-MM-DD"
+                            
+                            row.innerHTML = `
+                                <td>${record.record_id}</td>
+                                <td>${record.record_name}</td>
+                                <td>${uploadedDate}</td>
+                                <td>${testDate}</td>
+                                <td>
+                                    <button class="btn btn-outline-primary btn-sm" onclick="viewDocument(this)" data-document="${record.record_document}">View</button>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="downloadDocument(this)" data-document="${record.record_document}">Download</button>
+                                </td>
+                            `;
+                            tableBody.appendChild(row);
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error during search:', error);
+                    showModal('An error occurred while searching. Please try again.');
+                }
+            } else {
+                showModal('Please select a column and enter a search term.');
+            }
+        });
+
+        // Function to show the modal with a custom message
+        function showModal(message) {
+            document.getElementById('alertModalBody').textContent = message;
+            const alertModal = new bootstrap.Modal(document.getElementById('alertModal'));
+            alertModal.show();
+        }
+
+
+        // View PDF in iframe to verify correct display
+        function viewDocument(buttonElement) {
+        try {
+            const record_document = buttonElement.getAttribute("data-document");
+
+            if (!record_document) {
+                throw new Error("Invalid document data.");
+            }
+            console.log("Base64 document data:", record_document);
+            const binaryString = atob(record_document.replace(/\s/g, ''));
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            const pdfBlob = new Blob([bytes], { type: 'application/pdf' });
+            const pdfURL = URL.createObjectURL(pdfBlob);
+
+            // Open PDF in a new tab for testing
+            window.open(pdfURL, '_blank');
+
+        } catch (error) {
+            console.error('Error displaying document:', error);
+        }
+    }
+
+
+
+
+
+
+        // Download document with Base64 verification
+        function downloadDocument(buttonElement) {
+            try {
+                const record_document = buttonElement.getAttribute("data-document");
+
+                if (!record_document) {
+                    throw new Error("Invalid document data.");
+                }
+
+                const binaryString = atob(record_document.replace(/\s/g, ''));
+                const len = binaryString.length;
+                const bytes = new Uint8Array(len);
+
+                for (let i = 0; i < len; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+
+                const pdfBlob = new Blob([bytes], { type: 'application/pdf' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(pdfBlob);
+                link.download = "document.pdf";
+                link.click();
+
+            } catch (error) {
+                console.error('Error downloading document:', error);
+            }
+        }
+        document.addEventListener("DOMContentLoaded", function () {
+            // Retrieve and display user's name
+            const firstName = localStorage.getItem("firstName") || "John"; // Replace "John" with a default or fallback name
+            document.getElementById("userName").textContent = firstName;
+
+            // Active link highlighting based on the current page
+            const currentPath = window.location.pathname;
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            if (currentPath.includes("patient-records.html")) {
+                document.getElementById("patientRecordsLink").classList.add("active");
+            } else if (currentPath.includes("appointments.html")) {
+                document.getElementById("appointmentsLink").classList.add("active");
+            } else if (currentPath.includes("communication.html")) {
+                document.getElementById("communicationsLink").classList.add("active");
+            }
+
+            // Profile and logout functionality
+            document.getElementById('profileLink').addEventListener('click', function() {
+                const profileModal = new bootstrap.Modal(document.getElementById('profileModal'));
+                profileModal.show();
+            });
+
+            document.getElementById('logoutLink').addEventListener('click', function() {
+                localStorage.clear(); // Clear user data
+                sessionStorage.clear(); // Clear session storage
+                window.location.replace('/login.html'); // Redirect to login page
+            });
+        });
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
