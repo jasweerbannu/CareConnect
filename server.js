@@ -176,37 +176,55 @@ app.get('/appointments', (req, res) => {
 });
 
 app.post('/signup', async (req, res) => {
-    console.log('Received data:', req.body); // Log to check if data is coming in
+    console.log('Received data:', req.body); // Log incoming data to debug request body
 
+    // Extract fields from the request body
     const { first_name, last_name, govt_health_id, password, confirm_password } = req.body;
 
+    // Check if passwords match
     if (password !== confirm_password) {
+        console.error('Password mismatch error'); // Log for debugging
         return res.status(400).send("Passwords do not match!");
     }
 
+    // Validate password strength
     if (!validatePassword(password)) {
+        console.error('Password validation failed'); // Log validation failure
         return res.status(400).send("Password must be at least 8 characters long, contain at least 1 uppercase letter, 1 symbol, and 1 number.");
     }
 
     try {
+        // Check if a user with the same govt_health_id already exists in the database
+        console.log('Checking for existing user with ID:', govt_health_id);
         const userResult = await pool.query('SELECT * FROM users WHERE govt_health_id = $1', [govt_health_id]);
+
         if (userResult.rows.length > 0) {
+            console.error('User already exists with this Govt Health ID'); // Log duplicate user error
             return res.status(400).send('User with this Government Health ID already exists!');
         }
 
+        // Hash the password for security
+        console.log('Hashing password'); // Log password hashing step
         const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Insert the new user into the database
+        console.log('Inserting new user into the database'); // Log insertion step
         await pool.query(
             `INSERT INTO users (first_name, last_name, govt_health_id, patient_id, password) 
              VALUES ($1, $2, $3, $3, $4) RETURNING patient_id`,
             [first_name, last_name, govt_health_id, hashedPassword]
         );
 
+        // Redirect to the login page on success
+        console.log('User successfully registered, redirecting to login'); // Log successful registration
         res.redirect('/login');
     } catch (error) {
-        console.error('Error registering user:', error);
-        res.status(500).send('Server error');
+        // Log the full error details for debugging
+        console.error('Error registering user:', error); 
+        res.status(500).send('Server error'); // Send 500 status for internal server error
     }
 });
+
 
 const validatePassword = (password) => {
     const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
