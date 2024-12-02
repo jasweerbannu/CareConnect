@@ -52,6 +52,17 @@ app.use(
 // Function to create tables
 const createTables = async () => {
     try {
+        console.log("Ensuring Session table...");
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS session (
+                sid VARCHAR NOT NULL PRIMARY KEY,
+                sess JSON NOT NULL,
+                expire TIMESTAMP(6) NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS session_expire_idx ON session (expire);
+        `);
+        console.log("Session table ensured.");
+
         console.log("Ensuring Patients table...");
         await pool.query(`
             DROP TABLE IF EXISTS patients CASCADE;
