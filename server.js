@@ -52,7 +52,9 @@ app.use(
 // Function to create tables
 const createTables = async () => {
     try {
+        console.log("Ensuring Patients table...");
         await pool.query(`
+            DROP TABLE IF EXISTS patients CASCADE;
             CREATE TABLE IF NOT EXISTS patients (
                 patient_id CHAR(12) NOT NULL,
                 record_id CHAR(12) NOT NULL,
@@ -65,6 +67,19 @@ const createTables = async () => {
         `);
         console.log("Patients table ensured.");
 
+        console.log("Ensuring Users table...");
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                patient_id CHAR(12) PRIMARY KEY,
+                password TEXT NOT NULL,
+                first_name VARCHAR(100),
+                last_name VARCHAR(100),
+                govt_health_id CHAR(12) UNIQUE NOT NULL
+            );
+        `);
+        console.log("Users table ensured.");
+
+        console.log("Ensuring Appointments table...");
         await pool.query(`
             CREATE TABLE IF NOT EXISTS appointments (
                 appointment_id SERIAL PRIMARY KEY,
@@ -79,17 +94,7 @@ const createTables = async () => {
         `);
         console.log("Appointments table ensured.");
 
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS users (
-                patient_id CHAR(12) PRIMARY KEY,
-                password TEXT NOT NULL,
-                first_name VARCHAR(100),
-                last_name VARCHAR(100),
-                govt_health_id CHAR(12) UNIQUE NOT NULL
-            );
-        `);
-        console.log("Users table ensured.");
-
+        console.log("Ensuring Communications table...");
         await pool.query(`
             CREATE TABLE IF NOT EXISTS communications (
                 communicationid SERIAL PRIMARY KEY,
@@ -105,6 +110,7 @@ const createTables = async () => {
         console.log("Communications table ensured.");
     } catch (error) {
         console.error("Error creating tables:", error);
+        process.exit(1); // Exit if table creation fails
     }
 };
 
