@@ -69,6 +69,7 @@ const createTables = async () => {
 
         console.log("Ensuring Users table...");
         await pool.query(`
+            DROP TABLE IF EXISTS users CASCADE;
             CREATE TABLE IF NOT EXISTS users (
                 patient_id CHAR(12) PRIMARY KEY,
                 password TEXT NOT NULL,
@@ -81,6 +82,7 @@ const createTables = async () => {
 
         console.log("Ensuring Appointments table...");
         await pool.query(`
+            DROP TABLE IF EXISTS appointments CASCADE;
             CREATE TABLE IF NOT EXISTS appointments (
                 appointment_id SERIAL PRIMARY KEY,
                 patient_id CHAR(12) REFERENCES users(patient_id) ON DELETE CASCADE,
@@ -96,6 +98,7 @@ const createTables = async () => {
 
         console.log("Ensuring Communications table...");
         await pool.query(`
+            DROP TABLE IF EXISTS communications CASCADE;
             CREATE TABLE IF NOT EXISTS communications (
                 communicationid SERIAL PRIMARY KEY,
                 patientid CHAR(12) NOT NULL,
@@ -110,9 +113,10 @@ const createTables = async () => {
         console.log("Communications table ensured.");
     } catch (error) {
         console.error("Error creating tables:", error);
-        process.exit(1); // Exit if table creation fails
+        process.exit(1);
     }
 };
+
 
 // Ensure tables are created on startup
 createTables();
