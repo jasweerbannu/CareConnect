@@ -264,45 +264,31 @@
 
         // View PDF in iframe to verify correct display
         function viewDocument(buttonElement) {
-    try {
-        const record_document = buttonElement.getAttribute("data-document");
+        try {
+            const record_document = buttonElement.getAttribute("data-document");
 
-        if (!record_document) {
-            throw new Error("Invalid document data.");
+            if (!record_document) {
+                throw new Error("Invalid document data.");
+            }
+            console.log("Base64 document data:", record_document);
+            const binaryString = atob(record_document.replace(/\s/g, ''));
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            const pdfBlob = new Blob([bytes], { type: 'application/pdf' });
+            const pdfURL = URL.createObjectURL(pdfBlob);
+
+            // Open PDF in a new tab for testing
+            window.open(pdfURL, '_blank');
+
+        } catch (error) {
+            console.error('Error displaying document:', error);
         }
-
-        console.log("Base64 document data:", record_document);
-
-        // Decode Base64
-        const binaryString = atob(record_document.replace(/\s/g, ''));
-        if (!binaryString.startsWith('%PDF')) {
-            throw new Error("The document is not a valid PDF.");
-        }
-
-        // Convert to byte array
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-
-        // Create Blob and Object URL
-        const pdfBlob = new Blob([bytes], { type: 'application/pdf' });
-        const pdfURL = URL.createObjectURL(pdfBlob);
-
-        // Open PDF in new tab
-        window.open(pdfURL, '_blank');
-
-        // Optionally allow downloading
-        const downloadLink = document.createElement('a');
-        downloadLink.href = pdfURL;
-        downloadLink.download = `document.pdf`;
-        downloadLink.click();
-    } catch (error) {
-        console.error("Error displaying document:", error);
-        alert("Error displaying document. Please check the console for more details.");
     }
-}
 
 
 
