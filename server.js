@@ -4,51 +4,56 @@ const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const session = require('express-session');
 const path = require('path');
+const PgSession = require('connect-pg-simple')(session);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware setup
 app.use(cors());
-// Middleware to parse URL-encoded bodies (for form submissions)
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use(express.static('public'));
+app.use(express.urlencoded({ extended: true })); // For form submissions
+app.use(express.json()); // For JSON payloads
+app.use(express.static('public')); // Serve static files
 
-// Session middleware
-app.use(session({
-    secret: 'careconnectsecret',
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false }  // Set to true if using HTTPS
-}));
-
-// PostgreSQL connection setup
+// PostgreSQL connection setup with timeout
 const pool = new Pool({
-    user: 'manasa',
-    host: 'dpg-csg8sae8ii6s739dpqsg-a.oregon-postgres.render.com',
-    database: 'care_connect_75ii',
-    password: 'fXpuygKyI3AwexBiv5PHwkcJkCCQupIW',
+    user: process.env.DB_USER || 'manasa',
+    host: process.env.DB_HOST || 'dpg-csg8sae8ii6s739dpqsg-a.oregon-postgres.render.com',
+    database: process.env.DB_NAME || 'care_connect_75ii',
+    password: process.env.DB_PASSWORD || 'fXpuygKyI3AwexBiv5PHwkcJkCCQupIW',
     port: 5432,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 5000, // Timeout after 5 seconds
 });
 
-module.exports = pool;
+// Test database connection on startup
+pool.connect((err, client, release) => {
+    if (err) {
+        console.error('Error acquiring client:', err.stack);
+    } else {
+        console.log('Database connected successfully');
+        release();
+    }
+});
 
-// Function to create tables if they do not exist
+// Session middleware with PostgreSQL store
+app.use(
+    session({
+        store: new PgSession({
+            pool: pool, // Reuse PostgreSQL pool
+        }),
+        secret: process.env.SESSION_SECRET || 'careconnectsecret',
+        resave: false,
+        saveUninitialized: false,
+        cookie: { secure: false }, // Set to true if using HTTPS
+    })
+);
+
+// Function to create tables
 const createTables = async () => {
     try {
-        // Check if the 'patients' table exists
-        const checkPatientsTable = await pool.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_name = 'patients'
-            );
-        `);
-
-        if (!checkPatientsTable.rows[0].exists) {
-            // Create the patients table if it does not exist
-            await pool.query(`
-               CREATE TABLE IF NOT EXISTS patients (
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS patients (
                 patient_id CHAR(12) NOT NULL,
                 record_id CHAR(12) NOT NULL,
                 record_name TEXT NOT NULL,
@@ -57,227 +62,135 @@ const createTables = async () => {
                 record_document BYTEA,
                 PRIMARY KEY (patient_id, record_id)
             );
-            `);
-            console.log("Patients table created successfully.");
-        }
+        `);
+        console.log("Patients table ensured.");
 
-        // Check if the 'appointments' table exists
-        const checkAppointmentsTable = await pool.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_name = 'appointments'
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS appointments (
+                appointment_id SERIAL PRIMARY KEY,
+                patient_id CHAR(12) REFERENCES users(patient_id) ON DELETE CASCADE,
+                hospital_id CHAR(12) NOT NULL,
+                hospital_name TEXT NOT NULL,
+                doctor_id CHAR(7) NOT NULL,
+                doctor_name TEXT NOT NULL,
+                reason_for_appointment TEXT,
+                tests_done TEXT
             );
         `);
+        console.log("Appointments table ensured.");
 
-        if (!checkAppointmentsTable.rows[0].exists) {
-            // Create the appointments table if it does not exist
-            await pool.query(`
-                CREATE TABLE IF NOT EXISTS appointments (
-                    appointment_id SERIAL PRIMARY KEY,
-                    patient_id CHAR(12) REFERENCES users(patient_id) ON DELETE CASCADE,
-                    hospital_id CHAR(12) NOT NULL,
-                    hospital_name TEXT NOT NULL,
-                    doctor_id CHAR(7) NOT NULL,
-                    doctor_name TEXT NOT NULL,
-                    reason_for_appointment TEXT,
-                    tests_done TEXT
-                );
-
-            `);
-            console.log("Appointments table created successfully.");
-        }
-
-        // Check if the 'users' table exists
-        const checkUsersTable = await pool.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_name = 'users'
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                patient_id CHAR(12) PRIMARY KEY,
+                password TEXT NOT NULL,
+                first_name VARCHAR(100),
+                last_name VARCHAR(100),
+                govt_health_id CHAR(12) UNIQUE NOT NULL
             );
         `);
+        console.log("Users table ensured.");
 
-        if (!checkUsersTable.rows[0].exists) {
-            // Create the users table if it does not exist
-            await pool.query(`
-                CREATE TABLE IF NOT EXISTS users (
-                    patient_id CHAR(12) PRIMARY KEY,
-                    password TEXT NOT NULL,
-                    first_name VARCHAR(100),
-                    last_name VARCHAR(100),
-                    govt_health_id CHAR(12) UNIQUE NOT NULL
-                );
-
-            `);
-            console.log("Users table created successfully.");
-        }
-
-        const checkCommunicationsTable = await pool.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_name = 'Communications'
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS communications (
+                communicationid SERIAL PRIMARY KEY,
+                patientid CHAR(12) NOT NULL,
+                hospitalid CHAR(12) NOT NULL,
+                hospitalname TEXT NOT NULL,
+                doctorid CHAR(7) NOT NULL,
+                doctorname TEXT NOT NULL,
+                summaryofday TEXT NOT NULL,
+                suggestionsrecommendations TEXT NOT NULL
             );
         `);
-
-        if (!checkCommunicationsTable.rows[0].exists) {
-            await pool.query(`
-                CREATE TABLE IF NOT EXISTS Communications (
-                    CommunicationId SERIAL PRIMARY KEY,
-                    PatientId CHAR(12) NOT NULL,
-                    HospitalId CHAR(12) NOT NULL,
-                    HospitalName TEXT NOT NULL,
-                    DoctorId CHAR(7) NOT NULL,
-                    DoctorName TEXT NOT NULL,
-                    SummaryOfDay TEXT NOT NULL,
-                    SuggestionsRecommendations TEXT NOT NULL
-                );
-
-             `);
-             console.log("Communications table created successfully.");
-        }
-
+        console.log("Communications table ensured.");
     } catch (error) {
         console.error("Error creating tables:", error);
     }
 };
 
-// Call createTables function to ensure tables are created on startup
+// Ensure tables are created on startup
 createTables();
 
-// Serve the home page on the root URL
+// Serve routes for static pages
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html')); // Make sure this file exists in 'public' folder
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
-// Serve the login page after the home page
 app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
-
-// Serve the sign-up page
 app.get('/signup', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'signup.html'));
 });
-
-// Serve the dashboard page after login
 app.get('/dashboard', (req, res) => {
     if (!req.session.userId) {
-        console.log('inside the if cond');
         return res.redirect('/login');
     }
-    console.log('opening the dashboard page');
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
-// Serve the appointment page for logged-in users
-app.get('/appointments', (req, res) => {
-    if (!req.session.userId) {
-        return res.redirect('/login');
-    }
-    res.sendFile(path.join(__dirname, 'public', 'appointments.html'));
-});
+// Password validation helper function
+const validatePassword = (password) => {
+    const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    return regex.test(password);
+};
 
+// Sign-up logic
 app.post('/signup', async (req, res) => {
-    console.log('Received data:', req.body); // Log incoming data to debug request body
-
-    // Extract fields from the request body
     const { first_name, last_name, govt_health_id, password, confirm_password } = req.body;
 
-    // Check if passwords match
     if (password !== confirm_password) {
-        console.error('Password mismatch error'); // Log for debugging
         return res.status(400).send("Passwords do not match!");
     }
 
-    // Validate password strength
     if (!validatePassword(password)) {
-        console.error('Password validation failed'); // Log validation failure
-        return res.status(400).send("Password must be at least 8 characters long, contain at least 1 uppercase letter, 1 symbol, and 1 number.");
+        return res.status(400).send(
+            "Password must be at least 8 characters long, contain at least 1 uppercase letter, 1 symbol, and 1 number."
+        );
     }
 
     try {
-        // Check if a user with the same govt_health_id already exists in the database
-        console.log('Checking for existing user with ID:', govt_health_id);
         const userResult = await pool.query('SELECT * FROM users WHERE govt_health_id = $1', [govt_health_id]);
-
         if (userResult.rows.length > 0) {
-            console.error('User already exists with this Govt Health ID'); // Log duplicate user error
             return res.status(400).send('User with this Government Health ID already exists!');
         }
 
-        // Hash the password for security
-        console.log('Hashing password'); // Log password hashing step
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Insert the new user into the database
-        console.log('Inserting new user into the database'); // Log insertion step
         await pool.query(
             `INSERT INTO users (first_name, last_name, govt_health_id, patient_id, password) 
              VALUES ($1, $2, $3, $3, $4) RETURNING patient_id`,
             [first_name, last_name, govt_health_id, hashedPassword]
         );
-
-        // Redirect to the login page on success
-        console.log('User successfully registered, redirecting to login'); // Log successful registration
         res.redirect('/login');
     } catch (error) {
-        // Log the full error details for debugging
-        console.error('Error registering user:', error); 
-        res.status(500).send('Server error'); // Send 500 status for internal server error
+        console.error('Error registering user:', error);
+        res.status(500).send('Server error');
     }
 });
 
-
-const validatePassword = (password) => {
-    const regex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    console.log('Password validation result:', regex.test(password)); // Log the result of validation
-    return regex.test(password);
-};
-
+// Login logic
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        // Query to find the user with the given username (govt_health_id)
         const result = await pool.query('SELECT * FROM users WHERE govt_health_id = $1', [username]);
-        console.log('Query result:', result);
-
         const user = result.rows[0];
-
-        // Check if user is found
-        if (!user) {
-            console.log('No user found with govt_health_id:', username);
+        if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(401).json({ message: 'User ID or password is incorrect' });
         }
 
-        console.log('User from DB:', user);
-        console.log('Provided password:', password);
-        console.log('Stored hash:', user.password);
-
-        // If the password doesn't match
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        console.log('Password match result:', isPasswordValid);
-
-        if (!isPasswordValid) {
-            console.log('Password match failed');
-            return res.status(401).json({ message: 'User ID or password is incorrect' });
-        }
-
-        // If login is successful, set session
         req.session.userId = user.patient_id;
         req.session.save((err) => {
             if (err) {
-                console.error('Session save error:', err);
                 return res.status(500).send('Error saving session');
             }
-
-            // Send user profile data as JSON response
             res.status(200).json({
                 message: 'Login successful',
                 user: {
                     patient_id: user.patient_id,
                     first_name: user.first_name,
                     last_name: user.last_name,
-                    govt_health_id: user.govt_health_id
-                }
+                    govt_health_id: user.govt_health_id,
+                },
             });
         });
     } catch (error) {
@@ -286,8 +199,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-
-// Handle logout
+// Logout logic
 app.get('/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) {
@@ -297,16 +209,10 @@ app.get('/logout', (req, res) => {
     });
 });
 
-// Start the server
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
-
-// Route to search patient records based on a specific column and search term
+// **Your Mentioned Routes**
 app.get('/patients/search', async (req, res) => {
     const { column, searchTerm } = req.query;
 
-    // Check if both column and search term are provided
     if (!column || !searchTerm) {
         return res.status(400).json({ error: 'Please select a column and enter a search term.' });
     }
@@ -316,27 +222,17 @@ app.get('/patients/search', async (req, res) => {
         if (!allowedColumns.includes(column)) {
             throw new Error('Invalid column name');
         }
-        // Construct the query with necessary type casting for DATE columns
         const query = `
-        SELECT patient_id, record_id, 
-            record_name, 
-            uploaded_date, 
-            test_date, 
+            SELECT patient_id, record_id, record_name, uploaded_date, test_date,
             ENCODE(record_document, 'base64') AS record_document 
-        FROM patients 
-        WHERE ${column}::TEXT ILIKE $1
+            FROM patients WHERE ${column}::TEXT ILIKE $1
         `;
-
-        // Execute the query with the search term, adding '%' for partial matches
         const result = await pool.query(query, [`%${searchTerm}%`]);
 
-
-        // If no records are found, return a 404 status with a message
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'The item you are searching for is not found.' });
         }
 
-        // Send the found records as a JSON response
         res.json(result.rows);
     } catch (error) {
         console.error('Error searching patients:', error);
@@ -344,61 +240,56 @@ app.get('/patients/search', async (req, res) => {
     }
 });
 
-
 app.get('/api/patient-records', async (req, res) => {
-    const { patientId } = req.query; // Get patientId from query parameters
+    const { patientId } = req.query;
 
     if (!patientId) {
         return res.status(400).json({ error: "Patient ID is required" });
     }
 
     try {
-        // Query the database for patient records
-       // When fetching records, base64-encode record_document
-        const result = await pool.query('SELECT record_id, record_name, uploaded_date, test_date, ENCODE(record_document, \'base64\') as record_document FROM patients WHERE patient_id = $1', [patientId]);
+        const result = await pool.query(
+            'SELECT record_id, record_name, uploaded_date, test_date, ENCODE(record_document, \'base64\') as record_document FROM patients WHERE patient_id = $1',
+            [patientId]
+        );
 
-
-        // If no records found, return a 404 error
         if (result.rows.length === 0) {
             return res.status(404).json({ error: "No patient records found" });
         }
 
-        // Return the patient records as a JSON response
         res.json(result.rows);
     } catch (error) {
         console.error('Error fetching patient records:', error);
         res.status(500).json({ error: "Server error" });
     }
 });
+
 app.get('/api/appointments', async (req, res) => {
     const { patientId } = req.query;
 
-    // Ensure that a patientId is provided
     if (!patientId) {
         return res.status(400).json({ error: "Patient ID is required" });
     }
 
     try {
-        // Fetch appointments for the specified patient ID
         const result = await pool.query(
             `SELECT appointment_id, hospital_id, hospital_name, doctor_id, doctor_name, reason_for_appointment, tests_done 
             FROM appointments 
-            WHERE patient_id = $1`, 
+            WHERE patient_id = $1`,
             [patientId]
         );
 
-        // If no appointments found, return 404
         if (result.rows.length === 0) {
             return res.status(404).json({ error: "No appointments found for this patient" });
         }
 
-        // Send the appointment data as JSON
         res.json(result.rows);
     } catch (error) {
         console.error('Error fetching appointments:', error);
         res.status(500).json({ error: "Server error" });
     }
 });
+
 app.get('/api/appointments/search', async (req, res) => {
     const { patientId, column, searchTerm } = req.query;
 
@@ -407,12 +298,10 @@ app.get('/api/appointments/search', async (req, res) => {
     }
 
     try {
-        // Create a dynamic query that uses parameterized inputs for security
         const query = `SELECT * FROM appointments WHERE patient_id = $1 AND ${column}::TEXT ILIKE $2`;
         const values = [patientId, `%${searchTerm}%`];
-
         const result = await pool.query(query, values);
-        
+
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'No appointments found' });
         }
@@ -424,7 +313,6 @@ app.get('/api/appointments/search', async (req, res) => {
     }
 });
 
-// Route to fetch communications based on patientId
 app.get('/api/communications', async (req, res) => {
     const { patientId } = req.query;
 
@@ -468,7 +356,6 @@ app.get('/api/communications/search', async (req, res) => {
             WHERE patientid = $1 AND ${column} ILIKE $2
         `;
         const values = [patientId, `%${searchTerm}%`];
-
         const result = await pool.query(query, values);
 
         if (result.rows.length === 0) {
@@ -481,3 +368,17 @@ app.get('/api/communications/search', async (req, res) => {
         res.status(500).json({ error: 'Server error while searching communications' });
     }
 });
+
+// Start the server after ensuring tables are created
+const startServer = async () => {
+    try {
+        await createTables();
+        app.listen(PORT, () => {
+            console.log(`Server is running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error);
+    }
+};
+
+startServer();
