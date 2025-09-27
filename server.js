@@ -17,10 +17,10 @@ app.use(express.static('public')); // Serve static files
 
 // PostgreSQL connection setup with timeout
 const pool = new Pool({
-    user: process.env.DB_USER || 'postgresql_careconnect_1_user',
-    host: process.env.DB_HOST || 'dpg-ct6mfpdumphs739i4280-a',
-    database: process.env.DB_NAME || 'postgresql_careconnect_1',
-    password: process.env.DB_PASSWORD || '7pDQluC1YiBUXQPwktdOy3FlfHi3V3LL',
+    user: process.env.DB_USER || 'ravan',
+    host: process.env.DB_HOST || 'dpg-d3c382q4d50c73c8cl2g-a',
+    database: process.env.DB_NAME || 'careconnet_db',
+    password: process.env.DB_PASSWORD || 'ND1ZpMDzYueIRIgKykFbAFRI7OXLi749',
     port: 5432,
     ssl: { rejectUnauthorized: false },
     connectionTimeoutMillis: 5000, // Timeout after 5 seconds
@@ -399,3 +399,4 @@ const startServer = async () => {
 };
 
 startServer();
+
