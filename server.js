@@ -16,16 +16,11 @@ app.use(express.json()); // For JSON payloads
 app.use(express.static('public')); // Serve static files
 
 // PostgreSQL connection setup with timeout
+//postgresql://ravan:ND1ZpMDzYueIRIgKykFbAFRI7OXLi749@dpg-d3c382q4d50c73c8cl2g-a.oregon-postgres.render.com/careconnet_db
 const pool = new Pool({
-    user: process.env.DB_USER || 'ravan',
-    host: process.env.DB_HOST || 'dpg-ct6mfpdumphs739i4280-a.oregon-postgres.render.com',
-    database: process.env.DB_NAME || 'careconnet_db',
-    password: process.env.DB_PASSWORD || 'ND1ZpMDzYueIRIgKykFbAFRI7OXLi749',
-    port: 5432,
-    ssl: { rejectUnauthorized: false },
-    connectionTimeoutMillis: 5000, // Timeout after 5 seconds
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
 });
-
 // Test database connection on startup
 pool.connect((err, client, release) => {
     if (err) {
@@ -399,5 +394,6 @@ const startServer = async () => {
 };
 
 startServer();
+
 
 
